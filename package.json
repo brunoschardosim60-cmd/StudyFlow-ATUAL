@@ -1,7 +1,8 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "studyflow",
+  "description": "StudyFlow 2.0 - Plataforma inteligente para otimizar seu estudo com IA",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
