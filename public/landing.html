@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudyFlow — Estude com IA, evolua de verdade</title>
+  <meta name="description" content="Plataforma de estudos com IA Flora que cria seu cronograma, corrige redações, gera quizzes e flashcards adaptados ao seu nível. Para ENEM, vestibular e concursos." />
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-light: #eff6ff;
+      --accent: #f59e0b;
+      --accent-light: #fffbeb;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --card: #ffffff;
+      --bg: #f8fafc;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--text);
+    }
+
+    /* ── NAV ─────────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 clamp(1rem, 5vw, 3rem);
+      height: 64px;
+      background: rgba(248,250,252,0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700; font-size: 1.2rem;
+      color: var(--text); text-decoration: none;
+    }
+    .nav-logo-icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-logo-icon svg { width: 18px; height: 18px; fill: white; }
+    .nav-links { display: flex; align-items: center; gap: 8px; }
+    .btn-nav {
+      padding: 8px 20px; border-radius: 10px; font-size: 0.875rem;
+      font-weight: 500; cursor: pointer; text-decoration: none;
+      transition: all 0.15s;
+    }
+    .btn-ghost { background: none; border: 1px solid var(--border); color: var(--text-muted); }
+    .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-primary {
+      background: var(--primary); color: white; border: 1px solid var(--primary);
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+
+    /* ── HERO ────────────────────────────────────────────── */
+    .hero {
+      padding: clamp(4rem, 10vw, 7rem) clamp(1rem, 5vw, 3rem) clamp(3rem, 8vw, 5rem);
+      text-align: center;
+      max-width: 900px; margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px; border-radius: 100px;
+      background: var(--primary-light); color: var(--primary);
+      font-size: 0.8rem; font-weight: 500; margin-bottom: 1.5rem;
+      border: 1px solid rgba(37,99,235,0.15);
+    }
+    .hero-badge-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--primary); animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.3)} }
+
+    .hero h1 {
+      font-size: clamp(2.2rem, 6vw, 4rem);
+      letter-spacing: -0.03em;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 span { color: var(--primary); }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--accent) 0%, #f97316 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      color: var(--text-muted);
+      max-width: 620px; margin: 0 auto 2.5rem;
+    }
+    .hero-cta {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    }
+    .btn-lg {
+      padding: 14px 32px; border-radius: 12px;
+      font-size: 1rem; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-lg.primary {
+      background: var(--primary); color: white;
+      box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+    }
+    .btn-lg.primary:hover {
+      background: var(--primary-dark);
+      box-shadow: 0 6px 20px rgba(37,99,235,0.45);
+      transform: translateY(-1px);
+    }
+    .btn-lg.outline {
+      background: white; color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-lg.outline:hover { border-color: var(--primary); color: var(--primary); }
+    .hero-trust {
+      margin-top: 2rem;
+      font-size: 0.8rem; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .hero-trust-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--border); }
+
+    /* ── SOCIAL PROOF STRIP ──────────────────────────────── */
+    .social-strip {
+      background: white; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 1.25rem clamp(1rem, 5vw, 3rem);
+      display: flex; align-items: center; justify-content: center;
+      gap: clamp(1.5rem, 4vw, 3rem); flex-wrap: wrap;
+    }
+    .social-stat { text-align: center; }
+    .social-stat-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.5rem; font-weight: 700; color: var(--text);
+    }
+    .social-stat-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+    .social-sep { width: 1px; height: 40px; background: var(--border); }
+
+    /* ── SECTIONS ────────────────────────────────────────── */
+    section { padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 5vw, 3rem); }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-tag {
+      display: inline-block; padding: 4px 14px; border-radius: 100px;
+      background: var(--primary-light); color: var(--primary);
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; margin-bottom: 1rem;
+    }
+    .section-title {
+      font-size: clamp(1.6rem, 4vw, 2.5rem);
+      margin-bottom: 0.75rem; letter-spacing: -0.02em;
+    }
+    .section-sub {
+      font-size: 1rem; color: var(--text-muted);
+      max-width: 540px; margin-bottom: 3rem;
+    }
+
+    /* ── FEATURE GRID ────────────────────────────────────── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    .feature-card {
+      background: white; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.75rem;
+      transition: all 0.2s;
+    }
+    .feature-card:hover {
+      border-color: rgba(37,99,235,0.3);
+      box-shadow: 0 8px 30px rgba(37,99,235,0.08);
+      transform: translateY(-2px);
+    }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1rem; font-size: 1.4rem;
+    }
+    .feature-card h3 { font-size: 1.05rem; margin-bottom: 0.5rem; }
+    .feature-card p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; }
+    .feature-pill {
+      display: inline-flex; align-items: center;
+      margin-top: 1rem; padding: 3px 10px; border-radius: 100px;
+      font-size: 0.72rem; font-weight: 500;
+      background: var(--primary-light); color: var(--primary);
+    }
+
+    /* ── HOW IT WORKS ────────────────────────────────────── */
+    .how-bg { background: white; }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2rem; margin-top: 3rem; position: relative;
+    }
+    .step { text-align: center; position: relative; }
+    .step-num {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--primary); color: white;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.25rem;
+    }
+    .step h3 { font-size: 1rem; margin-bottom: 0.5rem; }
+    .step p { font-size: 0.875rem; color: var(--text-muted); }
+
+    /* ── FLORA SPOTLIGHT ─────────────────────────────────── */
+    .flora-section { background: var(--primary); color: white; overflow: hidden; position: relative; }
+    .flora-section::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 70% 50%, rgba(255,255,255,0.08) 0%, transparent 60%);
+    }
+    .flora-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4rem;
+      align-items: center; position: relative;
+    }
+    @media (max-width: 700px) { .flora-inner { grid-template-columns: 1fr; gap: 2rem; } }
+    .flora-tag {
+      display: inline-block; padding: 4px 14px; border-radius: 100px;
+      background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.9);
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; margin-bottom: 1rem;
+    }
+    .flora-section h2 { color: white; font-size: clamp(1.6rem, 3.5vw, 2.4rem); margin-bottom: 1rem; }
+    .flora-section p { color: rgba(255,255,255,0.8); margin-bottom: 1.5rem; font-size: 1rem; }
+    .flora-features { display: flex; flex-direction: column; gap: 0.75rem; }
+    .flora-feat {
+      display: flex; align-items: flex-start; gap: 12px;
+      background: rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 16px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .flora-feat-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .flora-feat-text { font-size: 0.875rem; color: rgba(255,255,255,0.9); line-height: 1.5; }
+    .flora-feat-text strong { color: white; display: block; font-weight: 600; margin-bottom: 2px; }
+
+    /* Chat mockup */
+    .chat-mockup {
+      background: white; border-radius: 20px; padding: 1.25rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      max-width: 360px;
+    }
+    .chat-header {
+      display: flex; align-items: center; gap: 10px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 14px;
+    }
+    .chat-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .chat-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.9rem; color: var(--text); }
+    .chat-status { font-size: 0.72rem; color: #10b981; }
+    .chat-msgs { display: flex; flex-direction: column; gap: 10px; }
+    .msg { max-width: 85%; border-radius: 14px; padding: 10px 14px; font-size: 0.82rem; line-height: 1.5; }
+    .msg-flora { background: #f1f5f9; color: var(--text); border-bottom-left-radius: 4px; }
+    .msg-user { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .msg-flora strong { color: var(--primary); }
+    .typing { display: flex; gap: 4px; align-items: center; padding: 10px 14px; background: #f1f5f9; border-radius: 14px; border-bottom-left-radius: 4px; width: fit-content; }
+    .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); animation: bounce 1.2s infinite; }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+    /* ── SUBJECTS ────────────────────────────────────────── */
+    .subjects-grid {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2rem;
+    }
+    .subject-pill {
+      padding: 8px 18px; border-radius: 100px;
+      border: 1px solid var(--border); background: white;
+      font-size: 0.875rem; font-weight: 500; color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .subject-pill-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── TESTIMONIALS ────────────────────────────────────── */
+    .testimonials-bg { background: white; }
+    .testimonials-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem; margin-top: 3rem;
+    }
+    .testimonial {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem;
+    }
+    .stars { color: var(--accent); font-size: 0.9rem; margin-bottom: 0.75rem; letter-spacing: 2px; }
+    .testimonial p { font-size: 0.9rem; color: var(--text); line-height: 1.65; margin-bottom: 1rem; }
+    .testimonial-author { display: flex; align-items: center; gap: 10px; }
+    .author-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .author-name { font-size: 0.875rem; font-weight: 600; }
+    .author-sub { font-size: 0.75rem; color: var(--text-muted); }
+
+    /* ── CTA FINAL ───────────────────────────────────────── */
+    .cta-section { text-align: center; }
+    .cta-box {
+      background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+      border-radius: 28px; padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 4rem);
+      max-width: 700px; margin: 0 auto;
+      box-shadow: 0 20px 60px rgba(37,99,235,0.3);
+    }
+    .cta-box h2 { color: white; font-size: clamp(1.8rem, 4vw, 2.5rem); margin-bottom: 1rem; }
+    .cta-box p { color: rgba(255,255,255,0.8); margin-bottom: 2rem; font-size: 1rem; }
+    .btn-white {
+      background: white; color: var(--primary);
+      padding: 14px 36px; border-radius: 12px;
+      font-size: 1rem; font-weight: 700;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+    .cta-note { color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-top: 1rem; }
+
+    /* ── FOOTER ──────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border); padding: 2rem clamp(1rem, 5vw, 3rem);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+    }
+    footer p { font-size: 0.8rem; color: var(--text-muted); }
+    .footer-links { display: flex; gap: 1.5rem; }
+    .footer-links a { font-size: 0.8rem; color: var(--text-muted); text-decoration: none; }
+    .footer-links a:hover { color: var(--primary); }
+
+    /* ── UTILS ───────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .hide-mobile { display: none; }
+      .social-sep { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    StudyFlow
+  </a>
+  <div class="nav-links">
+    <a href="#features" class="btn-nav btn-ghost hide-mobile">Funcionalidades</a>
+    <a href="#flora" class="btn-nav btn-ghost hide-mobile">Flora IA</a>
+    <a href="/auth" class="btn-nav btn-primary">Entrar grátis →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section>
+  <div class="hero">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      IA para ENEM, vestibular e concursos
+    </div>
+    <h1>Estude com <span>inteligência</span>,<br>não com <em>esforço duplo</em></h1>
+    <p class="hero-sub">
+      Flora, sua professora-IA, cria seu cronograma, corrige redações, gera quizzes
+      e flashcards adaptados ao seu nível — tudo automático, em português.
+    </p>
+    <div class="hero-cta">
+      <a href="/auth" class="btn-lg primary">
+        Começar grátis
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#features" class="btn-lg outline">Ver funcionalidades</a>
+    </div>
+    <div class="hero-trust">
+      <span>✓ Sem cartão de crédito</span>
+      <span class="hero-trust-dot"></span>
+      <span>✓ Começa em 2 minutos</span>
+      <span class="hero-trust-dot"></span>
+      <span>✓ 100% em português</span>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<div class="social-strip">
+  <div class="social-stat">
+    <div class="social-stat-num">8+</div>
+    <div class="social-stat-label">Modelos de IA</div>
+  </div>
+  <div class="social-sep"></div>
+  <div class="social-stat">
+    <div class="social-stat-num">ENEM</div>
+    <div class="social-stat-label">Padrão INEP real</div>
+  </div>
+  <div class="social-sep"></div>
+  <div class="social-stat">
+    <div class="social-stat-num">5</div>
+    <div class="social-stat-label">Objetivos suportados</div>
+  </div>
+  <div class="social-sep"></div>
+  <div class="social-stat">
+    <div class="social-stat-num">0</div>
+    <div class="social-stat-label">Configuração manual</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-inner">
+    <span class="section-tag">Funcionalidades</span>
+    <h2 class="section-title">Tudo que você precisa.<br>Nada que você não precisa.</h2>
+    <p class="section-sub">Cada recurso foi pensado para reduzir tempo de estudo e aumentar o que fica na memória.</p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#eff6ff">🧠</div>
+        <h3>Flora — sua professora IA</h3>
+        <p>Analisa seu desempenho em tempo real, decide o que estudar, cria cronograma e executa ações direto no app. Basta pedir em português natural.</p>
+        <span class="feature-pill">Streaming em tempo real</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#f0fdf4">📝</div>
+        <h3>Correção de redação ENEM</h3>
+        <p>5 competências C1–C5, nota 0–1000, análise parágrafo por parágrafo com reescrita sugerida. Padrão INEP real, não genérico.</p>
+        <span class="feature-pill">Calibrado como corretor humano</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#fefce8">⚡</div>
+        <h3>Quiz adaptativo</h3>
+        <p>Questões no nível exato do seu acerto atual. Errou 3 vezes a mesma coisa? O quiz foca nisso. Suporta ENEM, CESPE, FCC e vestibulares.</p>
+        <span class="feature-pill">Ajusta dificuldade automaticamente</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#fdf4ff">🃏</div>
+        <h3>Flashcards inteligentes</h3>
+        <p>Gerados a partir do seu caderno ou de qualquer tema. Revisão espaçada automática — 1, 3, 7 e 15 dias. Notificações antes de esquecer.</p>
+        <span class="feature-pill">Spaced repetition real</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#fff7ed">📓</div>
+        <h3>Caderno com IA de cálculo</h3>
+        <p>Escreve à mão, a IA resolve as contas na hora. Pressão real de stylus, formas geométricas, notas adesivas, múltiplas páginas e compartilhamento.</p>
+        <span class="feature-pill">Resolve cálculos inline</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#f0fdf4">📊</div>
+        <h3>Análise de desempenho</h3>
+        <p>Heatmap de atividade, radar por matéria, evolução semanal e predição de nota ENEM baseada no seu desempenho atual.</p>
+        <span class="feature-pill">Predição de nota ENEM</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-bg">
+  <div class="section-inner" style="text-align:center">
+    <span class="section-tag">Como funciona</span>
+    <h2 class="section-title">De zero a estudando em 3 passos</h2>
+    <p class="section-sub" style="margin:0 auto 0">Sem configuração longa. Sem tutorial obrigatório.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Responde 5 perguntas</h3>
+        <p>Objetivo (ENEM, concurso...), tempo disponível, matérias difíceis. 2 minutos.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Flora cria seu plano</h3>
+        <p>Cronograma semanal personalizado, pronto para usar. Você aprova ou ajusta conversando.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Estuda, Flora monitora</h3>
+        <p>Cada quiz, redação e sessão alimenta a IA. Ela adapta tudo em tempo real.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FLORA SPOTLIGHT -->
+<section class="flora-section" id="flora">
+  <div class="flora-inner">
+    <div>
+      <span class="flora-tag">Flora IA</span>
+      <h2>Mais que um chatbot.<br>Uma professora de verdade.</h2>
+      <p>Flora conhece seu histórico, seus erros recorrentes e quanto tempo você tem. Ela não dá respostas genéricas — ela fala sobre <em style="font-style:normal;color:rgba(255,255,255,1);font-weight:600">você</em>.</p>
+
+      <div class="flora-features">
+        <div class="flora-feat">
+          <span class="flora-feat-icon">🎯</span>
+          <div class="flora-feat-text">
+            <strong>Decide o que estudar</strong>
+            Analisa revisões atrasadas, pontos fracos e tempo disponível para sugerir o próximo passo ideal.
+          </div>
+        </div>
+        <div class="flora-feat">
+          <span class="flora-feat-icon">⚡</span>
+          <div class="flora-feat-text">
+            <strong>Executa, não só fala</strong>
+            Cria cronograma, gera quiz, abre caderno e define metas — tudo com uma confirmação sua.
+          </div>
+        </div>
+        <div class="flora-feat">
+          <span class="flora-feat-icon">🔄</span>
+          <div class="flora-feat-text">
+            <strong>8 modelos de IA com fallback</strong>
+            Gemini, Groq, DeepSeek, Cerebras e mais. Se um falha, outro assume em milissegundos.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat mockup -->
+    <div style="display:flex;justify-content:center">
+      <div class="chat-mockup">
+        <div class="chat-header">
+          <div class="chat-avatar">🌱</div>
+          <div>
+            <div class="chat-name">Flora</div>
+            <div class="chat-status">● Online agora</div>
+          </div>
+        </div>
+        <div class="chat-msgs">
+          <div class="msg msg-user">Oi Flora, quanto tempo tenho antes do ENEM?</div>
+          <div class="msg msg-flora">Faltam <strong>47 dias</strong>. Seu pior desempenho está em Química (38% de acerto) e você tem 4 revisões atrasadas.<br><br>Quer que eu monte um plano de sprint para essas semanas?</div>
+          <div class="msg msg-user">Sim, faz</div>
+          <div class="msg msg-flora">✅ Cronograma criado! Foco em Química nas manhãs e revisões às noites. Comecemos agora?</div>
+          <div class="typing"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SUBJECTS -->
+<section>
+  <div class="section-inner">
+    <span class="section-tag">Matérias</span>
+    <h2 class="section-title">Cobre todas as matérias do ENEM</h2>
+    <p class="section-sub">Cada matéria tem quiz calibrado, flashcards e análise de erros recorrentes.</p>
+    <div class="subjects-grid">
+      <div class="subject-pill"><span class="subject-pill-dot" style="background:#3b82f6"></span>Matemática</div>
+      <div class="subject-pill"><span class="subject-pill-dot" style="background:#10b981"></span>Biologia</div>
+      <div class="subject-pill"><span class="subject-pill-dot" style="background:#f59e0b"></span>Química</div>
+      <div class="subject-pill"><span class="subject-pill-dot" style="background:#8b5cf6"></span>Física</div>
+      <div class="subject-pill"><span class="subject-pill-dot" style="background:#ef4444"></span>Português</div>
+      <div class="subject-pill"><span class="subject-pill-dot" style="background:#f97316"></span>História</div>
+      <div class="subject-pill"><span class="subject-pill-dot" style="background:#14b8a6"></span>Geografia</div>
+      <div class="subject-pill"><span class="subject-pill-dot" style="background:#ec4899"></span>Inglês</div>
+      <div class="subject-pill"><span class="subject-pill-dot" style="background:#06b6d4"></span>Redação</div>
+      <div class="subject-pill"><span class="subject-pill-dot" style="background:#64748b"></span>Simulados</div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials-bg">
+  <div class="section-inner">
+    <span class="section-tag">Depoimentos</span>
+    <h2 class="section-title">O que dizem os primeiros usuários</h2>
+    <div class="testimonials-grid">
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <p>"A Flora me disse que eu tinha 4 revisões atrasadas de Química antes mesmo de eu perceber. Montou um cronograma de sprint para o ENEM e foi exatamente o que eu precisava."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background:#3b82f6">MR</div>
+          <div>
+            <div class="author-name">Mariana R.</div>
+            <div class="author-sub">Estudante ENEM 2025</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <p>"A correção de redação é melhor do que muitos cursinhos. Ela aponta o parágrafo exato, cita o trecho e ainda reescreve a frase para mostrar como ficaria melhor."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background:#8b5cf6">LP</div>
+          <div>
+            <div class="author-name">Lucas P.</div>
+            <div class="author-sub">Cursinho pré-vestibular</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <p>"O caderno com IA de cálculo é absurdo. Escrevo a equação à mão, a IA resolve na hora ao lado. Uso para física todo dia agora."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background:#10b981">AG</div>
+          <div>
+            <div class="author-name">Ana G.</div>
+            <div class="author-sub">Engenharia — FUVEST</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section">
+  <div class="section-inner">
+    <div class="cta-box">
+      <h2>Pronto para estudar<br>do jeito certo?</h2>
+      <p>Crie sua conta grátis, responda 5 perguntas e a Flora já monta seu plano de estudos.</p>
+      <a href="/auth" class="btn-white">
+        Começar agora — é grátis
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <p class="cta-note">Sem cartão de crédito · Começa em 2 minutos</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="nav-logo" style="text-decoration:none">
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:#0f172a">StudyFlow</span>
+  </div>
+  <p>© 2025 StudyFlow. Feito no Brasil 🇧🇷</p>
+  <div class="footer-links">
+    <a href="/auth">Entrar</a>
+    <a href="/auth">Cadastrar</a>
+  </div>
+</footer>
+
+<script>
+  (function preservePreviewQueryOnAuthLinks() {
+    var suffix = window.location.search + window.location.hash;
+    if (!suffix) return;
+    var authLinks = document.querySelectorAll('a[href="/auth"]');
+    authLinks.forEach(function (link) {
+      link.setAttribute('href', '/auth' + suffix);
+    });
+  })();
+</script>
+
+</body>
+</html>

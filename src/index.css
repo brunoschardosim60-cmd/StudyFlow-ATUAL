@@ -1,0 +1,248 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 220 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 12%;
+
+    --primary: 220 80% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 160 60% 45%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 35 95% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 220 80% 50%;
+
+    --radius: 0.75rem;
+
+    --subject-math: 220 80% 50%;
+    --subject-bio: 160 60% 40%;
+    --subject-chem: 280 60% 55%;
+    --subject-physics: 35 95% 55%;
+    --subject-portuguese: 0 70% 55%;
+    --subject-history: 30 60% 45%;
+    --subject-geography: 170 50% 40%;
+    --subject-english: 200 60% 50%;
+    --subject-redacao: 340 65% 50%;
+    --subject-simulado: 260 50% 50%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 25% 8%;
+    --foreground: 220 15% 92%;
+    --card: 220 25% 12%;
+    --card-foreground: 220 15% 92%;
+    --popover: 220 25% 12%;
+    --popover-foreground: 220 15% 92%;
+    --primary: 220 80% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 160 60% 45%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 220 20% 18%;
+    --muted-foreground: 220 10% 55%;
+    --accent: 35 95% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 220 80% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .black {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 90%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 90%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 90%;
+    --primary: 220 80% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 160 60% 40%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 50%;
+    --accent: 35 95% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 0 0% 12%;
+    --input: 0 0% 12%;
+    --ring: 220 80% 55%;
+    --sidebar-background: 0 0% 3%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 8%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 10%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm;
+  }
+  .subject-badge {
+    @apply px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide;
+  }
+}
+
+/* Tiptap editor styles */
+.ProseMirror {
+  outline: none;
+}
+
+/* Notebook paper text style — fluid writing experience */
+.notebook-paper-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  color: hsl(var(--foreground));
+}
+.notebook-paper-text p { margin: 0.4em 0; }
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  height: 0;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror h1 { font-size: 1.75rem; font-weight: 700; margin: 1rem 0 0.5rem; }
+.ProseMirror h2 { font-size: 1.375rem; font-weight: 600; margin: 0.75rem 0 0.375rem; }
+.ProseMirror h3 { font-size: 1.125rem; font-weight: 600; margin: 0.5rem 0 0.25rem; }
+.ProseMirror ul { list-style: disc; padding-left: 1.5rem; }
+.ProseMirror ol { list-style: decimal; padding-left: 1.5rem; }
+.ProseMirror mark { border-radius: 2px; padding: 1px 2px; }
+
+@media (max-width: 640px) {
+  html,
+  body,
+  #root {
+    overflow-x: hidden;
+  }
+}
+
+/* Notebook templates */
+.notebook-lined {
+  background-image: repeating-linear-gradient(
+    transparent, transparent 31px,
+    hsl(var(--border) / 0.35) 31px, hsl(var(--border) / 0.35) 32px
+  );
+  background-size: 100% 32px;
+}
+.notebook-grid {
+  background-image:
+    repeating-linear-gradient(hsl(var(--border) / 0.2) 0 1px, transparent 1px 100%),
+    repeating-linear-gradient(90deg, hsl(var(--border) / 0.2) 0 1px, transparent 1px 100%);
+  background-size: 24px 24px;
+}
+.notebook-dotted {
+  background-image: radial-gradient(circle, hsl(var(--border) / 0.3) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Física — eixo cartesiano leve sobre grade fina (diagrama de forças) */
+.notebook-physics {
+  background-image:
+    /* eixos centrais mais marcados */
+    linear-gradient(to right, transparent calc(50% - 1px), hsl(var(--primary) / 0.45) calc(50% - 1px), hsl(var(--primary) / 0.45) calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(to bottom, transparent calc(50% - 1px), hsl(var(--primary) / 0.45) calc(50% - 1px), hsl(var(--primary) / 0.45) calc(50% + 1px), transparent calc(50% + 1px)),
+    /* grade fina */
+    repeating-linear-gradient(hsl(var(--border) / 0.18) 0 1px, transparent 1px 100%),
+    repeating-linear-gradient(90deg, hsl(var(--border) / 0.18) 0 1px, transparent 1px 100%);
+  background-size: 100% 100%, 100% 100%, 20px 20px, 20px 20px;
+  background-repeat: no-repeat, no-repeat, repeat, repeat;
+}
+
+/* Química — pauta hexagonal sutil (estruturas moleculares) */
+.notebook-chemistry {
+  background-image:
+    radial-gradient(circle, hsl(var(--border) / 0.28) 1px, transparent 1px),
+    radial-gradient(circle, hsl(var(--border) / 0.28) 1px, transparent 1px);
+  background-size: 22px 38px, 22px 38px;
+  background-position: 0 0, 11px 19px;
+}
+
+/* Redação ENEM — 30 linhas numeradas, espaçamento generoso */
+.notebook-essay {
+  background-image: repeating-linear-gradient(
+    transparent, transparent 35px,
+    hsl(var(--border) / 0.45) 35px, hsl(var(--border) / 0.45) 36px
+  );
+  background-size: 100% 36px;
+  counter-reset: essay-line;
+  position: relative;
+}
+.notebook-essay::before {
+  content: "Redação ENEM • máx. 30 linhas";
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+}

@@ -1,0 +1,1 @@
+ALTER TABLE public.notebook_pages ADD COLUMN tags text[] NOT NULL DEFAULT '{}';
