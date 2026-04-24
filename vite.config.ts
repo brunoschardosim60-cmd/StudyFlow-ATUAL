@@ -2,7 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
-// import { visualizer } from "rollup-plugin-visualizer"; // uncomment for bundle analysis
+import { visualizer } from "rollup-plugin-visualizer";
+import compression from "vite-plugin-compression";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -14,6 +15,12 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        drop_console: mode === "production",
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -32,6 +39,22 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
+    mode === "analyze" && visualizer({
+      open: true,
+      filename: "dist/stats.html",
+      title: "Bundle Analysis",
+      brotliSize: true,
+    }),
+    compression({
+      algorithm: "gzip",
+      ext: ".gz",
+      deleteOriginFile: false,
+    }),
+    compression({
+      algorithm: "brotli",
+      ext: ".br",
+      deleteOriginFile: false,
+    }),
   ].filter(Boolean),
   resolve: {
     alias: {
