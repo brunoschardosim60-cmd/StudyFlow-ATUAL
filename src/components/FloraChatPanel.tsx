@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,6 +99,7 @@ function sanitizeHistory(messages: Message[]): Message[] {
 
 export function FloraChatPanel({ isOpen, onClose, initialMessage }: FloraChat) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -133,10 +135,27 @@ export function FloraChatPanel({ isOpen, onClose, initialMessage }: FloraChat) {
           body: { action: "load_chat" },
         });
         if (data?.messages?.length) {
-          setMessages(data.messages.map((m: any) => ({
+          const loaded: (Message & { seq?: number; created_at?: string })[] = data.messages.map((m: any) => ({
             role: m.role as "user" | "assistant",
             content: m.content,
-          })));
+            seq: typeof m.seq === "number" ? m.seq : undefined,
+            created_at: m.created_at,
+          }));
+
+          // Detecta mensagens fora de ordem pelo seq
+          let outOfOrder = false;
+          for (let i = 1; i < loaded.length; i++) {
+            const prevSeq = loaded[i - 1].seq ?? -1;
+            const curSeq = loaded[i].seq ?? -1;
+            if (curSeq < prevSeq) { outOfOrder = true; break; }
+          }
+
+          if (outOfOrder) {
+            loaded.sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+            toast.info("Mensagens foram reordenadas automaticamente.");
+          }
+
+          setMessages(loaded.map(({ role, content }) => ({ role, content })));
         }
       } catch { /* silent */ }
       setChatLoaded(true);
@@ -145,7 +164,7 @@ export function FloraChatPanel({ isOpen, onClose, initialMessage }: FloraChat) {
 
   // Resumo diário (uma vez por dia)
   useEffect(() => {
-    if (!isOpen || !chatLoaded || !user || isDailySummaryLoading) return;
+    if (!isOpen || !chatLoaded || !user || isDailySummaryLoading || messages.length > 0) return;
     const todayKey = `flora-daily-summary-${user.id}-${new Date().toISOString().split("T")[0]}`;
     if (typeof window !== "undefined") {
       try {
@@ -272,7 +291,9 @@ export function FloraChatPanel({ isOpen, onClose, initialMessage }: FloraChat) {
         window.dispatchEvent(new CustomEvent("flora-schedule-removed", { detail: data }));
         toast.success("Matéria removida do cronograma.");
       } else if (data?.type === "notebook" && data.notebookId) {
-        toast.success(`Caderno "${data.titulo || "Novo"}" criado! Acesse em Cadernos.`);
+        toast.success(`Caderno "${data.titulo || "Novo"}" criado.`);
+        navigate(`/notebooks/${data.notebookId}`);
+        onClose();
       } else if (data?.type === "meta_dia") {
         window.dispatchEvent(new CustomEvent("flora-meta-dia", { detail: data }));
         toast.success("Meta do dia atualizada!");
@@ -281,7 +302,7 @@ export function FloraChatPanel({ isOpen, onClose, initialMessage }: FloraChat) {
       console.error("Action error:", err);
       toast.error("Erro ao executar ação.");
     }
-  }, []);
+  }, [navigate, onClose]);
 
   const send = async () => {
     if (!input.trim() || isSending) return;

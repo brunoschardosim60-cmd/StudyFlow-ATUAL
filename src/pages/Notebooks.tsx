@@ -196,7 +196,7 @@ export default function Notebooks() {
   }
 
   return (
-    <div className="min-h-screen bg-background animate-page-slide-in">
+    <div className="min-h-screen bg-background">
       <div className="container max-w-5xl mx-auto px-2 sm:px-4 py-5 sm:py-8 space-y-5 sm:space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">

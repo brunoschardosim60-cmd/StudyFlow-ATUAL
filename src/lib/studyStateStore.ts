@@ -225,10 +225,11 @@ export async function loadRemoteStudyState(userId: string): Promise<StudyStateSn
     return null;
   }
 
-  const [topicsResult, weeklyResult, sessionsResult] = await Promise.all([
+  const [topicsResult, weeklyResult, sessionsResult, snapshotResult] = await Promise.all([
     supabase.from("study_topics").select("*").eq("user_id", userId).order("study_date", { ascending: true }),
     supabase.from("weekly_slots").select("*").eq("user_id", userId).order("dia", { ascending: true }).order("horario", { ascending: true }),
     supabase.from("study_sessions").select("*").eq("user_id", userId).order("start_at", { ascending: true }),
+    supabase.from("study_state").select("topics, weekly_slots, sessions").eq("user_id", userId).maybeSingle(),
   ]);
 
   if (topicsResult.error && isMissingStudySyncTable(topicsResult.error)) {
@@ -243,12 +244,17 @@ export async function loadRemoteStudyState(userId: string): Promise<StudyStateSn
     warnStudySyncUnavailableOnce();
     return null;
   }
+  if (snapshotResult.error && isMissingStudySyncTable(snapshotResult.error)) {
+    warnStudySyncUnavailableOnce();
+    return null;
+  }
 
   if (topicsResult.error) throw topicsResult.error;
   if (weeklyResult.error) throw weeklyResult.error;
   if (sessionsResult.error) throw sessionsResult.error;
+  if (snapshotResult.error) throw snapshotResult.error;
 
-  const topics = normalizeTopics(
+  const relationalTopics = normalizeTopics(
     (topicsResult.data ?? []).map((row) => ({
       id: row.id,
       tema: row.tema,
@@ -265,7 +271,7 @@ export async function loadRemoteStudyState(userId: string): Promise<StudyStateSn
     }))
   );
 
-  const weekly = normalizeWeeklySlots(
+  const relationalWeekly = normalizeWeeklySlots(
     (weeklyResult.data ?? []).map((row) => ({
       id: row.id,
       horario: row.horario,
@@ -276,7 +282,7 @@ export async function loadRemoteStudyState(userId: string): Promise<StudyStateSn
     }))
   );
 
-  const sessions = normalizeSessions(
+  const relationalSessions = normalizeSessions(
     (sessionsResult.data ?? []).map((row) => ({
       id: row.id,
       topicId: row.topic_id,
@@ -287,7 +293,15 @@ export async function loadRemoteStudyState(userId: string): Promise<StudyStateSn
     }))
   );
 
-  if (topics.length === 0 && (weeklyResult.data ?? []).length === 0 && sessions.length === 0) {
+  const snapshotTopics = normalizeTopics(snapshotResult.data?.topics ?? []);
+  const snapshotWeekly = normalizeWeeklySlots(snapshotResult.data?.weekly_slots ?? []);
+  const snapshotSessions = normalizeSessions(snapshotResult.data?.sessions ?? []);
+
+  const topics = mergeTopics(snapshotTopics, relationalTopics);
+  const weekly = mergeWeekly(snapshotWeekly, relationalWeekly);
+  const sessions = mergeSessions(snapshotSessions, relationalSessions);
+
+  if (topics.length === 0 && sessions.length === 0 && countConfiguredWeeklySlots(weekly) === 0) {
     return null;
   }
 

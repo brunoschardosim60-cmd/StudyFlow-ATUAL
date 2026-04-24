@@ -3,14 +3,13 @@ import { useTheme } from "next-themes";
 import {
   Pause, Play, X, Square, RotateCcw,
   Minimize2, Maximize2, Sun, Moon, CircleDot,
-  PictureInPicture2,
 } from "lucide-react";
 import { getFocusMessage } from "@/lib/focusMessages";
 import { StudyMediaLinks } from "@/components/StudyMediaLinks";
-import { usePictureInPicture } from "@/hooks/usePictureInPicture";
-import { toast } from "sonner";
+
 
 type FocusViewMode = "full" | "minimal";
+
 
 interface FocusModeOverlayProps {
   isOpen: boolean;
@@ -37,36 +36,7 @@ export function FocusModeOverlay({
 
   const message = useMemo(() => getFocusMessage(elapsed), [elapsed]);
   const ThemeIcon = theme === "light" ? Sun : theme === "dark" ? Moon : CircleDot;
-  const pip = usePictureInPicture();
 
-  // Wire popup actions back to timer controls
-  useEffect(() => {
-    pip.onAction((action: string) => {
-      if (action === "pause") onPause();
-      else if (action === "resume") onResume();
-      else if (action === "stop") onStop();
-    });
-  }, [pip.onAction, onPause, onResume, onStop]);
-
-  // Keep PiP in sync
-  useEffect(() => {
-    if (pip.active) {
-      pip.update(formattedTime, topicName || "", running);
-    }
-  }, [pip.active, pip.update, formattedTime, topicName, running]);
-
-  const togglePiP = async () => {
-    if (pip.active) {
-      pip.close();
-      return;
-    }
-    try {
-      await pip.open(formattedTime, topicName || "", running);
-      toast.success("Timer flutuante ativado!");
-    } catch (err: any) {
-      toast.error(err?.message || "Não foi possível abrir o timer flutuante");
-    }
-  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -140,11 +110,6 @@ export function FocusModeOverlay({
               <div className="absolute left-4 right-4 top-4 flex items-center justify-between gap-3">
                 <div className="rounded-xl border border-white/10 bg-card/70 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md">Zen</div>
                 <div className="flex items-center gap-2">
-                  {pip.isSupported && (
-                    <button onClick={togglePiP} title="Timer flutuante" className={`rounded-xl border bg-card/70 p-2 transition hover:text-foreground ${pip.active ? "text-primary" : "text-muted-foreground"}`}>
-                      <PictureInPicture2 className="h-4 w-4" />
-                    </button>
-                  )}
                   <button onClick={cycleTheme} className="rounded-xl border bg-card/70 p-2 text-muted-foreground transition hover:text-foreground">
                     <ThemeIcon className="h-4 w-4" />
                   </button>
@@ -190,11 +155,6 @@ export function FocusModeOverlay({
                 </h2>
               </div>
               <div className="flex items-center gap-2">
-                {pip.isSupported && (
-                  <button onClick={togglePiP} title="Timer flutuante" className={`rounded-xl border bg-background/60 p-2 transition hover:bg-background hover:text-foreground ${pip.active ? "text-primary" : "text-muted-foreground"}`}>
-                    <PictureInPicture2 className="h-5 w-5" />
-                  </button>
-                )}
                 <button onClick={cycleTheme} className="rounded-xl border bg-background/60 p-2 text-muted-foreground transition hover:bg-background hover:text-foreground">
                   <ThemeIcon className="h-5 w-5" />
                 </button>
@@ -216,7 +176,6 @@ export function FocusModeOverlay({
               </div>
 
               <div className="space-y-4 text-left">
-                {/* Controls */}
                 <div className="rounded-2xl border border-white/10 bg-background/45 p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Controles</p>
                   <div className="mt-4 grid gap-3">
@@ -238,7 +197,6 @@ export function FocusModeOverlay({
                   </div>
                 </div>
 
-                {/* Spotify / YouTube */}
                 <div className="rounded-2xl border border-white/10 bg-background/45 p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3">Música</p>
                   <StudyMediaLinks />

@@ -388,7 +388,7 @@ export default function Analise() {
   }
 
   return (
-    <div className="min-h-screen bg-background animate-page-slide-in">
+    <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6">
 
         {/* Header */}

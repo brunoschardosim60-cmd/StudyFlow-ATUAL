@@ -105,10 +105,11 @@ export async function suggestEssayTheme(): Promise<string> {
   return data?.data?.tema as string;
 }
 
-export async function correctEssay(essayId: string, tema: string, texto: string): Promise<void> {
+export async function correctEssay(essayId: string, tema: string, texto: string): Promise<{ truncated?: boolean }> {
   const { data, error } = await supabase.functions.invoke("essay-corrector", {
     body: { action: "correct", essayId, tema, texto },
   });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
+  return { truncated: data?.truncated === true };
 }

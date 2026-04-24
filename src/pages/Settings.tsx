@@ -133,8 +133,8 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-background animate-page-slide-in pb-20 md:pb-6">
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-background pb-20 md:pb-6">
+      <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container max-w-2xl mx-auto px-3 sm:px-4 py-3 flex items-center gap-3">
           <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => navigate("/")}>
             <ArrowLeft className="w-4 h-4" />
@@ -287,6 +287,7 @@ export default function Settings() {
             </div>
           )}
         </section>
+
 
         {/* Admin */}
         {isAdmin && (

@@ -103,8 +103,8 @@ function LandingOrDashboard() {
 
 function RouteFallback() {
   return (
-    <div className="min-h-screen bg-background animate-fade-in">
-      <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-background">
+      <div className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-muted animate-pulse" />
           <div className="space-y-1.5 flex-1">

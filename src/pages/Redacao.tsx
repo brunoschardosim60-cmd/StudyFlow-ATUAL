@@ -93,6 +93,7 @@ export default function Redacao() {
   const [feedbackRevealed, setFeedbackRevealed] = useState(false);
   const [lastSavedTexto, setLastSavedTexto] = useState("");
   const [lastSavedTema, setLastSavedTema] = useState("");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   function hashText(s: string): string {
     let h = 5381;
     for (let i = 0; i < s.length; i++) h = ((h << 5) + h) ^ s.charCodeAt(i);
@@ -151,6 +152,17 @@ export default function Redacao() {
 
   const selected = useMemo(() => essays.find((e) => e.id === selectedId) ?? null, [essays, selectedId]);
 
+  // Bug 2 fix: se o usuário editar após correção, voltar para rascunho
+  useEffect(() => {
+    if (!selected || selected.status !== "corrigida") return;
+    if (texto !== lastSavedTexto || tema !== lastSavedTema) {
+      // Edição detectada pós-correção: rebaixa para rascunho
+      setEssays((prev) =>
+        prev.map((e) => (e.id === selected.id ? { ...e, status: "rascunho" as const } : e))
+      );
+    }
+  }, [texto, tema, selected, lastSavedTexto, lastSavedTema]);
+
   // Autosave: debounce 30s
   useEffect(() => {
     if (!selected || selected.status === "corrigida") return;
@@ -161,7 +173,10 @@ export default function Redacao() {
         await updateEssayDraft(selected.id, { tema, texto });
         setLastSavedTema(tema);
         setLastSavedTexto(texto);
-      } catch { /* silent autosave */ }
+        setLastSavedAt(new Date());
+      } catch {
+        toast.warning("Falha ao salvar automaticamente. Verifique sua conexão.");
+      }
     }, 30000);
     return () => clearTimeout(timer);
   }, [tema, texto, selected, lastSavedTema, lastSavedTexto]);
@@ -193,6 +208,9 @@ export default function Redacao() {
     setSaving(true);
     try {
       await updateEssayDraft(selected.id, { tema, texto });
+      setLastSavedTema(tema);
+      setLastSavedTexto(texto);
+      setLastSavedAt(new Date());
       await refresh();
       toast.success("Rascunho salvo.");
     } catch (error) {
@@ -244,12 +262,14 @@ export default function Redacao() {
       // Small delay so user sees the step change
       await new Promise(r => setTimeout(r, 400));
       setCorrectionStep("Flora corrigindo competências...");
-      await correctEssay(selected.id, tema, texto);
+      const result = await correctEssay(selected.id, tema, texto);
       setCorrectionStep("Finalizando correção...");
       await refresh();
       setFeedbackRevealed(false);
-      // Trigger staggered reveal after a tick
       requestAnimationFrame(() => setFeedbackRevealed(true));
+      if (result.truncated) {
+        toast.warning("Seu texto foi truncado em 4000 caracteres para a correção. Apenas parte foi avaliada.", { duration: 8000 });
+      }
       toast.success("Correção concluída pela Flora.");
     } catch (error) {
       reportError("correctEssay", error, { devOnly: true });
@@ -295,7 +315,7 @@ export default function Redacao() {
   const paragrafos = feedbackComp?._paragrafos;
 
   return (
-    <div className="min-h-screen bg-background animate-page-slide-in">
+    <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-4 sm:py-6">
         {/* Header */}
         <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -432,8 +452,14 @@ export default function Redacao() {
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium">Texto da redação</label>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground flex items-center gap-2">
                         {wordCount} palavras · ~{lineCount} linhas
+                        {lastSavedAt && (
+                          <span className="inline-flex items-center gap-1 text-green-600">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Salvo · {lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        )}
                         <span className={lineCount >= config.minLines && lineCount <= config.maxLines
                           ? " text-green-600" : " text-orange-500"}>
                           {" "}(alvo {config.minLines}–{config.maxLines})

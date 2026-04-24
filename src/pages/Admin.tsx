@@ -445,32 +445,76 @@ export default function Admin() {
                         </Button>
                       </div>
                       {showSessions && (
-                        <div className="max-h-[400px] space-y-2 overflow-y-auto">
-                          {workspace.state.sessions.slice().reverse().slice(0, 50).map((session) => (
-                            <div key={session.id} className="flex items-center justify-between rounded-xl border border-border bg-background p-3">
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium">
-                                  {Math.round((session.durationMs / 3_600_000) * 10) / 10}h
-                                  {session.subject ? ` — ${session.subject}` : ""}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {new Date(session.start).toLocaleDateString("pt-BR")}
-                                </p>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                onClick={() => void withSaving(
-                                  () => deleteAdminSession(selectedUserId, user!.id, session.id),
-                                  "Sessão removida."
-                                )}
-                                disabled={saving}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
+                        <div className="max-h-[400px] space-y-3 overflow-y-auto">
+                          {(() => {
+                            const sorted = workspace.state.sessions.slice().sort((a, b) => b.start.localeCompare(a.start));
+                            const grouped = new Map<string, typeof sorted>();
+                            for (const s of sorted) {
+                              const dayKey = new Date(s.start).toLocaleDateString("pt-BR");
+                              if (!grouped.has(dayKey)) grouped.set(dayKey, []);
+                              grouped.get(dayKey)!.push(s);
+                            }
+                            let shown = 0;
+                            const entries = Array.from(grouped.entries());
+                            return entries.map(([day, daySessions]) => {
+                              if (shown >= 50) return null;
+                              const dayTotalMs = daySessions.reduce((a, s) => a + s.durationMs, 0);
+                              const dayTotalH = Math.round((dayTotalMs / 3_600_000) * 10) / 10;
+
+                              // Group by subject within the day
+                              const bySubject = new Map<string, { totalMs: number; sessions: typeof daySessions }>();
+                              for (const s of daySessions) {
+                                const key = s.subject || "__none__";
+                                if (!bySubject.has(key)) bySubject.set(key, { totalMs: 0, sessions: [] });
+                                const entry = bySubject.get(key)!;
+                                entry.totalMs += s.durationMs;
+                                entry.sessions.push(s);
+                              }
+
+                              const result = (
+                                <div key={day} className="rounded-xl border border-border bg-background p-3 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-sm font-semibold">{day}</p>
+                                    <span className="text-xs font-medium text-muted-foreground">{dayTotalH}h total</span>
+                                  </div>
+                                  {Array.from(bySubject.entries()).map(([subjectKey, { totalMs, sessions: subSessions }]) => {
+                                    const subH = Math.round((totalMs / 3_600_000) * 10) / 10;
+                                    const label = subjectKey === "__none__" ? "Sem matéria" : subjectKey;
+                                    return (
+                                      <div key={subjectKey} className="pl-2 border-l-2 border-border/60 space-y-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+                                          <span className="text-xs text-muted-foreground">{subH}h</span>
+                                        </div>
+                                        {subSessions.map((session) => {
+                                          shown++;
+                                          const sessionH = Math.round((session.durationMs / 3_600_000) * 10) / 10;
+                                          return (
+                                            <div key={session.id} className="flex items-center justify-between rounded-lg bg-muted/30 px-2 py-1.5">
+                                              <span className="text-xs">{sessionH}h</span>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                                                onClick={() => void withSaving(
+                                                  () => deleteAdminSession(selectedUserId, user!.id, session.id),
+                                                  "Sessão removida."
+                                                )}
+                                                disabled={saving}
+                                              >
+                                                <Trash2 className="h-3 w-3" />
+                                              </Button>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              );
+                              return result;
+                            });
+                          })()}
                           {workspace.state.sessions.length === 0 && (
                             <p className="text-sm text-muted-foreground">Nenhuma sessão registrada.</p>
                           )}

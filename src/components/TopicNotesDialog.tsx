@@ -383,7 +383,7 @@ export function TopicNotesDialog({ topic, open, onClose, onUpdateNotes, onUpdate
                       >
                         <div className="flex h-full min-h-0 flex-col items-center text-center">
                           <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wider font-semibold shrink-0">Pergunta</p>
-                          <div className="flex-1 min-h-0 w-full overflow-y-auto px-1 pr-2">
+                          <div className="flex-1 min-h-0 w-full overflow-y-auto px-1 pr-2 scrollbar-minimal">
                             <MathText className="font-medium text-sm leading-snug">{card.frente}</MathText>
                           </div>
                           {due && (
@@ -412,7 +412,7 @@ export function TopicNotesDialog({ topic, open, onClose, onUpdateNotes, onUpdate
                       >
                         <div className="flex h-full min-h-0 flex-col items-center text-center">
                           <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wider font-semibold shrink-0">Resposta</p>
-                          <div className="flex-1 min-h-0 w-full overflow-y-auto px-1 pr-2">
+                          <div className="flex-1 min-h-0 w-full overflow-y-auto px-1 pr-2 scrollbar-minimal">
                             <MathText className="font-medium text-sm leading-snug">{card.verso}</MathText>
                           </div>
                           <RotateCcw className="absolute bottom-2 right-2 w-3 h-3 text-muted-foreground/40" />

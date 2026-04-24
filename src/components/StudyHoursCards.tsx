@@ -23,15 +23,27 @@ function formatWeekLabel(monday: Date): string {
   return `${fmt(monday)} — ${fmt(sunday)}`;
 }
 
+function toLocalDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function sessionLocalDate(start: string): string {
+  // Parse ISO string to local date
+  return toLocalDate(new Date(start));
+}
+
 function getWeekData(sessions: StudySession[], monday: Date) {
   const data = DAY_LABELS.map((label, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = toLocalDate(d);
     let totalMs = 0;
     for (const s of sessions) {
       if (!s.durationMs) continue;
-      if (s.start.split("T")[0] === dateStr) totalMs += s.durationMs;
+      if (sessionLocalDate(s.start) === dateStr) totalMs += s.durationMs;
     }
     return {
       day: label,
@@ -69,7 +81,7 @@ export function StudyHoursCards({ todayHours, weekHours, monthHours, sessions }:
 
   const weekData = getWeekData(sessions, viewMonday);
   const weekTotal = Math.round(weekData.reduce((s, d) => s + d.hours, 0) * 10) / 10;
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = toLocalDate(new Date());
   const isCurrentWeek = weekOffset === 0;
 
   const summaryItems = [

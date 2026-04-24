@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   createTopic,
   type Flashcard,
@@ -141,15 +142,22 @@ export function useStudyDashboard() {
           "Timeout ao carregar estado remoto",
         );
         let nextState = remote ?? getInitialRemoteStudyState();
-        const localHasData = canRestoreLocalStudyState();
+        const initialMergeDone = hasCompletedInitialMerge(user.id);
 
-        if (remote && !hasCompletedInitialMerge(user.id)) {
+        if (remote && !initialMergeDone) {
           nextState = mergeStudyStates(localState, remote);
           await saveRemoteStudyState(user.id, nextState);
           markInitialMergeComplete(user.id);
         }
 
         if (cancelled) return;
+
+        // After initial merge is done, remote is the source of truth — update localStorage
+        if (remote && initialMergeDone) {
+          saveTopics(nextState.topics);
+          saveWeekly(nextState.weekly);
+          saveSessions(nextState.sessions);
+        }
 
         setTopics(nextState.topics);
         setWeekly(nextState.weekly);
@@ -170,21 +178,6 @@ export function useStudyDashboard() {
         setSyncStatus("synced");
         setCanRestoreFromLocal(false);
         setHydrated(true);
-
-        // Auto-merge silencioso: se ainda existir dado local não sincronizado, envia para nuvem
-        if (localHasData && remote) {
-          try {
-            const merged = mergeStudyStates(localState, nextState);
-            await saveRemoteStudyState(user.id, merged);
-            if (!cancelled) {
-              setTopics(merged.topics);
-              setWeekly(merged.weekly);
-              setSessions(merged.sessions);
-            }
-          } catch (err) {
-            reportError("Auto-merge silencioso falhou:", err, { devOnly: true });
-          }
-        }
 
         if (!remote) {
           await saveRemoteStudyState(user.id, nextState);
@@ -208,6 +201,74 @@ export function useStudyDashboard() {
       cancelled = true;
     };
   }, [authLoading, gamificationSyncMode, studySyncMode, user]);
+
+  // Realtime: listen for admin changes to study sessions/state
+  useEffect(() => {
+    if (!user || studySyncMode === "local_only") return;
+
+    const studyStateChannel = supabase
+      .channel(`study-state-realtime-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'study_state',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as { topics?: unknown; weekly_slots?: unknown; sessions?: unknown };
+          if (row.topics) setTopics(row.topics as StudyTopic[]);
+          if (row.weekly_slots) setWeekly(row.weekly_slots as WeeklySlot[]);
+          if (row.sessions) setSessions(row.sessions as StudySession[]);
+          setSyncStatus("synced");
+        }
+      )
+      .subscribe();
+
+    const studySessionsChannel = supabase
+      .channel(`study-sessions-realtime-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'study_sessions',
+          filter: `user_id=eq.${user.id}`,
+        },
+        async () => {
+          // Only reload sessions — do NOT overwrite topics/weekly since
+          // this event is often triggered by our own save and the snapshot
+          // may still contain stale topic data (e.g. revision not yet toggled).
+          try {
+            const { data: rows } = await supabase
+              .from("study_sessions")
+              .select("*")
+              .eq("user_id", user.id)
+              .order("start_at", { ascending: true });
+            if (!rows) return;
+            const freshSessions = rows.map((r) => ({
+              id: r.id,
+              topicId: r.topic_id,
+              subject: r.subject,
+              start: r.start_at,
+              end: r.end_at,
+              durationMs: r.duration_ms,
+            })) as StudySession[];
+            setSessions(freshSessions);
+            setSyncStatus("synced");
+          } catch (error) {
+            reportError("Erro ao recarregar sessoes em tempo real:", error, { devOnly: true });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(studyStateChannel);
+      supabase.removeChannel(studySessionsChannel);
+    };
+  }, [user, studySyncMode]);
 
   // Listen for Flora's daily goals update
   useEffect(() => {

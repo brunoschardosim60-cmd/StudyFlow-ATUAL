@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   ArrowLeft, Plus, Trash2, ChevronLeft, ChevronRight, Loader2, Pencil, Type, Maximize2, Minimize2, Share2,
-  Brain, Sparkles, BookPlus, CheckCircle2, XCircle, ZoomIn, ZoomOut, FileText,
+  Brain, Sparkles, BookPlus, CheckCircle2, XCircle, ZoomIn, ZoomOut, FileText, Cloud, CloudOff, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InlineMath } from "react-katex";
@@ -261,6 +261,7 @@ export default function NotebookEditor() {
   const [pages, setPages] = useState<NotebookPage[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [darkMode, setDarkMode] = useState(false);
   const [mode, setMode] = useState<"text" | "draw">("text");
   const [pageTemplate, setPageTemplate] = useState<PageTemplate>("blank");
@@ -507,6 +508,7 @@ export default function NotebookEditor() {
 
   const autoSave = useCallback((updates: Partial<Pick<NotebookPage, "content" | "drawing_data">>) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    setSaveStatus("saving");
     saveTimerRef.current = setTimeout(async () => {
       if (!page) return;
       try {
@@ -532,8 +534,13 @@ export default function NotebookEditor() {
         );
 
         await Promise.race([updatePromise, timeoutPromise]);
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus((s) => s === "saved" ? "idle" : s), 3000);
       } catch (error) {
         console.error("AutoSave error:", error);
+        console.error("[NotebookAutoSave] FALHA ao salvar página", page.id, "notebook", id, "erro:", error);
+        setSaveStatus("error");
+        toast.error("Erro ao salvar caderno. Suas alterações podem não ter sido salvas.");
       }
     }, 1000);
   }, [page, id]);
@@ -1408,6 +1415,27 @@ export default function NotebookEditor() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="font-heading font-bold text-base sm:text-lg truncate min-w-0 flex-1">{notebook?.title}</h1>
+          {/* Save status indicator */}
+          <div className="flex items-center gap-1 text-xs shrink-0">
+            {saveStatus === "saving" && (
+              <span className="flex items-center gap-1 text-muted-foreground animate-pulse">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span className="hidden sm:inline">Salvando…</span>
+              </span>
+            )}
+            {saveStatus === "saved" && (
+              <span className="flex items-center gap-1 text-primary">
+                <Cloud className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Salvo</span>
+              </span>
+            )}
+            {saveStatus === "error" && (
+              <span className="flex items-center gap-1 text-destructive">
+                <CloudOff className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Erro ao salvar</span>
+              </span>
+            )}
+          </div>
 
           {/* Mode toggle */}
           <div className="order-4 sm:order-none w-full sm:w-auto flex items-center bg-muted rounded-lg p-0.5 gap-0.5 overflow-x-auto">

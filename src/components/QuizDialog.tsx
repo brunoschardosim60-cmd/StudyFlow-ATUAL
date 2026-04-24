@@ -309,6 +309,7 @@ export function QuizDialog({ topic, open, onClose, onSaveResult, initialQuestion
 
             <div className="space-y-2">
               {q.alternativas.map((alt, i) => {
+                const normalizedAlt = alt.replace(/^\s*[A-E]\)\s*/i, "").trim();
                 let style = "border-border hover:border-primary/40 hover:bg-primary/5";
                 if (selectedAnswer !== null) {
                   if (i === q.correta) style = "border-secondary bg-secondary/10 text-foreground";
@@ -323,7 +324,7 @@ export function QuizDialog({ topic, open, onClose, onSaveResult, initialQuestion
                     className={`w-full text-left p-3 rounded-lg border-2 text-sm transition-all ${style}`}
                   >
                     <span className="font-medium mr-2">{String.fromCharCode(65 + i)})</span>
-                    <MathText inline>{alt}</MathText>
+                    <MathText inline>{normalizedAlt}</MathText>
                   </button>
                 );
               })}

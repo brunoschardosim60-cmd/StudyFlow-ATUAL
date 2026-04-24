@@ -14,7 +14,7 @@ export function BottomNav() {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 backdrop-blur-sm md:hidden">
+    <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card md:hidden">
       <div className="flex items-center justify-around h-14 px-1">
         {items.map((item) => {
           const isFloraAction = (item as any).isAction;
@@ -37,7 +37,7 @@ export function BottomNav() {
                     : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <item.icon className={`w-5 h-5 ${isFloraAction ? "animate-pulse" : ""}`} />
+              <item.icon className={`w-5 h-5`} />
               {item.label}
             </button>
           );

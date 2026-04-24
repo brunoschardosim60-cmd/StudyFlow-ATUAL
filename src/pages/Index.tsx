@@ -6,16 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { createTopic, StudyTopic, WeeklySlot, ALL_SUBJECTS, Subject } from "@/lib/studyData";
 import { DashboardHero } from "@/components/DashboardHero";
-import { StatsCards } from "@/components/StatsCards";
-import { TodayRevisions } from "@/components/TodayRevisions";
-import { OverdueRevisions } from "@/components/OverdueRevisions";
-import { UpcomingRevisions } from "@/components/UpcomingRevisions";
-import { WeeklyRevisionSummary } from "@/components/WeeklyRevisionSummary";
-import { RevisionTable } from "@/components/RevisionTable";
 import { AddTopicForm } from "@/components/AddTopicForm";
 import { StudyTimer } from "@/components/StudyTimer";
-import { StudyHoursCards } from "@/components/StudyHoursCards";
-import { GamificationCard } from "@/components/GamificationCard";
 import { FocusMiniPlayer } from "@/components/FocusMiniPlayer";
 import { QuickStartChecklist } from "@/components/QuickStartChecklist";
 import { applyCustomColors, CustomThemeDialog } from "@/components/CustomThemeDialog";
@@ -41,6 +33,16 @@ const QuizDialog = lazy(() => import("@/components/QuizDialog").then(m => ({ def
 const TopicNotesDialog = lazy(() => import("@/components/TopicNotesDialog").then(m => ({ default: m.TopicNotesDialog })));
 const WeeklySchedule = lazy(() => import("@/components/WeeklySchedule").then(m => ({ default: m.WeeklySchedule })));
 const ReactMarkdown = lazy(() => import("react-markdown"));
+
+// Lazy: below-fold heavy components (recharts = 212KB, revision tables, stats)
+const StudyHoursCards = lazy(() => import("@/components/StudyHoursCards").then(m => ({ default: m.StudyHoursCards })));
+const GamificationCard = lazy(() => import("@/components/GamificationCard").then(m => ({ default: m.GamificationCard })));
+const StatsCards = lazy(() => import("@/components/StatsCards").then(m => ({ default: m.StatsCards })));
+const OverdueRevisions = lazy(() => import("@/components/OverdueRevisions").then(m => ({ default: m.OverdueRevisions })));
+const TodayRevisions = lazy(() => import("@/components/TodayRevisions").then(m => ({ default: m.TodayRevisions })));
+const WeeklyRevisionSummary = lazy(() => import("@/components/WeeklyRevisionSummary").then(m => ({ default: m.WeeklyRevisionSummary })));
+const UpcomingRevisions = lazy(() => import("@/components/UpcomingRevisions").then(m => ({ default: m.UpcomingRevisions })));
+const RevisionTable = lazy(() => import("@/components/RevisionTable").then(m => ({ default: m.RevisionTable })));
 
 // Skeleton fallback for sections that take space
 function SectionSkeleton({ className = "" }: { className?: string }) {
@@ -267,9 +269,9 @@ export default function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-background animate-page-slide-back pb-16 md:pb-0">
+    <div className="min-h-screen bg-background pb-16 md:pb-0">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
             <BookOpen className="w-5 h-5 text-primary-foreground" />
@@ -352,8 +354,6 @@ export default function Index() {
         />
 
         {/* Timer + Hours + Media */}
-
-        {/* Timer + Hours + Media */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           <StudyTimer
             running={timer.running}
@@ -366,40 +366,45 @@ export default function Index() {
             onOpenFocusMode={timer.openFocusMode}
             activeTopicName={activeTopic?.tema}
           />
-          <StudyHoursCards {...hoursStats} sessions={sessions} />
+          <Suspense fallback={<SectionSkeleton className="min-h-[180px]" />}>
+            <StudyHoursCards {...hoursStats} sessions={sessions} />
+          </Suspense>
         </div>
 
+        <Suspense fallback={<SectionSkeleton className="min-h-[120px]" />}>
+          <GamificationCard
+            streak={gamification.streak}
+            xp={gamification.xp}
+            level={gamification.level}
+            todayStudyMinutes={gamification.todayStudyMinutes}
+            todayRevisions={gamification.todayRevisions}
+            todayQuizCount={gamification.todayQuizCount}
+            goals={gamification.dailyGoals}
+          />
+        </Suspense>
 
+        <Suspense fallback={<SectionSkeleton className="min-h-[80px]" />}>
+          <StatsCards {...stats} />
+        </Suspense>
 
-        {/* Gamification - XP & Level */}
-        <GamificationCard
-          streak={gamification.streak}
-          xp={gamification.xp}
-          level={gamification.level}
-          todayStudyMinutes={gamification.todayStudyMinutes}
-          todayRevisions={gamification.todayRevisions}
-          todayQuizCount={gamification.todayQuizCount}
-          goals={gamification.dailyGoals}
-        />
+        <Suspense fallback={<SectionSkeleton className="min-h-[80px]" />}>
+          <OverdueRevisions
+            revisions={overdueRevisions}
+            onComplete={handleToggleRevision}
+            onReschedule={handleRescheduleOverdue}
+          />
+        </Suspense>
 
-        {/* Stats */}
-        <StatsCards {...stats} />
+        <Suspense fallback={<SectionSkeleton className="min-h-[80px]" />}>
+          <TodayRevisions revisions={todayRevisions} onComplete={handleToggleRevision} />
+        </Suspense>
 
-        {/* Overdue revisions */}
-        <OverdueRevisions
-          revisions={overdueRevisions}
-          onComplete={handleToggleRevision}
-          onReschedule={handleRescheduleOverdue}
-        />
-
-        {/* Today's revisions */}
-        <TodayRevisions revisions={todayRevisions} onComplete={handleToggleRevision} />
-
-        {/* Weekly summary + upcoming */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-          <WeeklyRevisionSummary topics={topics} />
-          <UpcomingRevisions revisions={upcomingRevisions} />
-        </div>
+        <Suspense fallback={<SectionSkeleton className="min-h-[120px]" />}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+            <WeeklyRevisionSummary topics={topics} />
+            <UpcomingRevisions revisions={upcomingRevisions} />
+          </div>
+        </Suspense>
 
         {/* Tabs */}
         <div className="overflow-x-auto">
@@ -426,15 +431,17 @@ export default function Index() {
           {tab === "revisao" ? (
             <div className="space-y-4">
               <AddTopicForm onAdd={handleAdd} openSignal={addTopicOpenSignal} />
-              <RevisionTable
-                topics={topics}
-                onToggleRevision={handleToggleRevision}
-                onRatingChange={handleRatingChange}
-                onDelete={handleDelete}
-                onOpenNotes={setNotesTopic}
-                onOpenQuiz={(topic) => { setQuizInitialQuestions(undefined); setQuizTopic(topic); }}
-                onStartStudy={handleStartStudyNow}
-              />
+              <Suspense fallback={<SectionSkeleton className="min-h-[200px]" />}>
+                <RevisionTable
+                  topics={topics}
+                  onToggleRevision={handleToggleRevision}
+                  onRatingChange={handleRatingChange}
+                  onDelete={handleDelete}
+                  onOpenNotes={setNotesTopic}
+                  onOpenQuiz={(topic) => { setQuizInitialQuestions(undefined); setQuizTopic(topic); }}
+                  onStartStudy={handleStartStudyNow}
+                />
+              </Suspense>
             </div>
           ) : (
             <Suspense fallback={<SectionSkeleton className="min-h-[300px]" />}>
