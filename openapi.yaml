@@ -1,0 +1,441 @@
+openapi: 3.0.0
+info:
+  title: StudyFlow API
+  version: 2.0.0
+  description: API REST para StudyFlow - Plataforma de Otimização de Estudo
+  contact:
+    name: StudyFlow Team
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.studyflow.com/v1
+    description: Production
+  - url: http://localhost:3000/v1
+    description: Development
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        plan:
+          type: string
+          enum: [free, pro, premium]
+        streak:
+          type: integer
+        total_study_hours:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    StudySession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        topic:
+          type: string
+        duration_minutes:
+          type: integer
+        focus_mode:
+          type: boolean
+        completed:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    Topic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        color:
+          type: string
+        priority:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Flashcard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        topic_id:
+          type: string
+          format: uuid
+        question:
+          type: string
+        answer:
+          type: string
+        ease_factor:
+          type: number
+        interval_days:
+          type: integer
+        next_review:
+          type: string
+          format: date-time
+        review_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+  /auth/signup:
+    post:
+      tags: [Authentication]
+      summary: Create new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                name:
+                  type: string
+      responses:
+        201:
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  session:
+                    type: object
+        400:
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        200:
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  session:
+                    type: object
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        401:
+          description: Unauthorized
+
+  /users/{id}:
+    patch:
+      tags: [Users]
+      summary: Update user profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                avatar_url:
+                  type: string
+      responses:
+        200:
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /study-sessions:
+    get:
+      tags: [Study Sessions]
+      summary: List user study sessions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: topic_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Study sessions retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StudySession'
+
+    post:
+      tags: [Study Sessions]
+      summary: Create new study session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                topic:
+                  type: string
+                duration_minutes:
+                  type: integer
+                focus_mode:
+                  type: boolean
+      responses:
+        201:
+          description: Study session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudySession'
+
+  /topics:
+    get:
+      tags: [Topics]
+      summary: List user topics
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Topics retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Topic'
+
+    post:
+      tags: [Topics]
+      summary: Create new topic
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                color:
+                  type: string
+                priority:
+                  type: integer
+      responses:
+        201:
+          description: Topic created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Topic'
+
+  /flashcards:
+    get:
+      tags: [Flashcards]
+      summary: Get flashcards for review
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: topic_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Flashcards retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Flashcard'
+
+  /flashcards/{id}/review:
+    patch:
+      tags: [Flashcards]
+      summary: Record flashcard review
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quality:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+      responses:
+        200:
+          description: Review recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flashcard'
+
+  /metrics/dashboard:
+    get:
+      tags: [Metrics]
+      summary: Get dashboard metrics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, monthly]
+            default: weekly
+      responses:
+        200:
+          description: Dashboard metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_study_hours:
+                    type: number
+                  sessions_count:
+                    type: integer
+                  topics_count:
+                    type: integer
+                  streak:
+                    type: integer
+                  accuracy:
+                    type: number
