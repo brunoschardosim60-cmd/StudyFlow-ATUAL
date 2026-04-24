@@ -37,6 +37,8 @@ const ReactMarkdown = lazy(() => import("react-markdown"));
 // Lazy: below-fold heavy components (recharts = 212KB, revision tables, stats)
 const StudyHoursCards = lazy(() => import("@/components/StudyHoursCards").then(m => ({ default: m.StudyHoursCards })));
 const GamificationCard = lazy(() => import("@/components/GamificationCard").then(m => ({ default: m.GamificationCard })));
+const AIInsightsPanel = lazy(() => import("@/components/AIInsightsPanel").then(m => ({ default: m.AIInsightsPanel })));
+const SmartRecommendations = lazy(() => import("@/components/SmartRecommendations").then(m => ({ default: m.SmartRecommendations })));
 const StatsCards = lazy(() => import("@/components/StatsCards").then(m => ({ default: m.StatsCards })));
 const OverdueRevisions = lazy(() => import("@/components/OverdueRevisions").then(m => ({ default: m.OverdueRevisions })));
 const TodayRevisions = lazy(() => import("@/components/TodayRevisions").then(m => ({ default: m.TodayRevisions })));
@@ -381,6 +383,14 @@ export default function Index() {
             todayQuizCount={gamification.todayQuizCount}
             goals={gamification.dailyGoals}
           />
+        </Suspense>
+
+        <Suspense fallback={<SectionSkeleton className="min-h-[200px]" />}>
+          <AIInsightsPanel />
+        </Suspense>
+
+        <Suspense fallback={<SectionSkeleton className="min-h-[200px]" />}>
+          <SmartRecommendations />
         </Suspense>
 
         <Suspense fallback={<SectionSkeleton className="min-h-[80px]" />}>

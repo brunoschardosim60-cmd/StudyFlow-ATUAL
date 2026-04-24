@@ -3,16 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Loader2, X } from "lucide-react";
+import { Send, Loader2, X, ThumbsUp, ThumbsDown, RotateCcw, Sparkles, MessageCircle } from "lucide-react";
 import { FloraQuotaIndicator } from "@/components/FloraQuotaIndicator";
 import { FloraIcon } from "@/components/FloraIcon";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
+  id: string;
   role: "user" | "assistant";
   content: string;
+  timestamp: Date;
+  feedback?: 'positive' | 'negative';
+  actions?: FloraAction[];
 }
 
 interface FloraAction {
@@ -28,18 +34,33 @@ interface FloraChat {
 
 type Objetivo = "enem" | "vestibular" | "concurso" | "faculdade" | "aprender" | string;
 
-// Chips de sugestão adaptados ao objetivo do aluno
-function getSuggestionChips(objetivo: Objetivo): string[] {
+// Chips de sugestão adaptados ao objetivo do aluno e contexto
+function getSuggestionChips(objetivo: Objetivo, messageCount: number): string[] {
+  const baseSuggestions = ["Me ajuda a estudar", "Monta um cronograma", "Quero um quiz"];
+
+  if (messageCount === 0) {
+    // Primeira interação
+    return ["Olá! Me apresenta?", "Como você pode me ajudar?", "Quero saber meu progresso"];
+  }
+
   switch (objetivo) {
     case "enem":
     case "vestibular":
-      return ["Me ajuda a estudar", "Monta um cronograma", "Quero um quiz ENEM", "Simular questão ENEM", "Corrigir minha redação"];
+      return messageCount > 5
+        ? ["Revisar matérias difíceis", "Simular prova", "Dicas para redação", "Análise de desempenho"]
+        : ["Me ajuda a estudar", "Monta um cronograma", "Quero um quiz ENEM", "Simular questão ENEM"];
     case "concurso":
-      return ["Me ajuda a estudar", "Monta um cronograma", "Quiz de conhecimentos gerais", "Simular questão de concurso", "Corrigir minha redação"];
+      return messageCount > 5
+        ? ["Questões específicas", "Técnicas de estudo", "Análise de edital", "Simulação de prova"]
+        : ["Me ajuda a estudar", "Monta um cronograma", "Quiz de conhecimentos gerais", "Simular questão"];
     case "faculdade":
-      return ["Me ajuda a estudar", "Monta um cronograma", "Quero um quiz", "Explica um conceito", "Corrigir minha redação"];
+      return messageCount > 5
+        ? ["Explicar conceitos", "Resumos de aula", "Preparação para prova", "Dicas de estudo"]
+        : ["Me ajuda a estudar", "Monta um cronograma", "Quero um quiz", "Explica um conceito"];
     default:
-      return ["Me ajuda a estudar", "Monta um cronograma", "Quero um quiz rápido", "Explica um conceito", "Corrigir minha redação"];
+      return messageCount > 5
+        ? ["Revisar conteúdo", "Praticar exercícios", "Explicar dúvidas", "Criar flashcards"]
+        : ["Me ajuda a estudar", "Monta um cronograma", "Quero um quiz rápido", "Explica um conceito"];
   }
 }
 
@@ -103,10 +124,12 @@ export function FloraChatPanel({ isOpen, onClose, initialMessage }: FloraChat) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [isDailySummaryLoading, setIsDailySummaryLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [chatLoaded, setChatLoaded] = useState(false);
   const [objetivo, setObjetivo] = useState<Objetivo>("enem");
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/flora-engine`;
 
   // Carrega objetivo do onboarding
@@ -123,81 +146,376 @@ export function FloraChatPanel({ isOpen, onClose, initialMessage }: FloraChat) {
   }, [user]);
 
   useEffect(() => {
-    if (isOpen && initialMessage) setInput(initialMessage);
+    if (isOpen && initialMessage) {
+      setInput(initialMessage);
+      inputRef.current?.focus();
+    }
   }, [isOpen, initialMessage]);
 
   // Carrega histórico do chat
   useEffect(() => {
     if (!isOpen || chatLoaded || !user) return;
-    (async () => {
-      try {
-        const { data } = await supabase.functions.invoke("flora-engine", {
-          body: { action: "load_chat" },
-        });
-        if (data?.messages?.length) {
-          const loaded: (Message & { seq?: number; created_at?: string })[] = data.messages.map((m: any) => ({
-            role: m.role as "user" | "assistant",
-            content: m.content,
-            seq: typeof m.seq === "number" ? m.seq : undefined,
-            created_at: m.created_at,
-          }));
-
-          // Detecta mensagens fora de ordem pelo seq
-          let outOfOrder = false;
-          for (let i = 1; i < loaded.length; i++) {
-            const prevSeq = loaded[i - 1].seq ?? -1;
-            const curSeq = loaded[i].seq ?? -1;
-            if (curSeq < prevSeq) { outOfOrder = true; break; }
-          }
-
-          if (outOfOrder) {
-            loaded.sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
-            toast.info("Mensagens foram reordenadas automaticamente.");
-          }
-
-          setMessages(loaded.map(({ role, content }) => ({ role, content })));
-        }
-      } catch { /* silent */ }
-      setChatLoaded(true);
-    })();
+    loadChatHistory();
   }, [isOpen, chatLoaded, user]);
 
-  // Resumo diário (uma vez por dia)
-  useEffect(() => {
-    if (!isOpen || !chatLoaded || !user || isDailySummaryLoading || messages.length > 0) return;
-    const todayKey = `flora-daily-summary-${user.id}-${new Date().toISOString().split("T")[0]}`;
-    if (typeof window !== "undefined") {
-      try {
-        if (window.localStorage.getItem(todayKey)) return;
-        const keysToRemove: string[] = [];
-        for (let i = 0; i < window.localStorage.length; i++) {
-          const k = window.localStorage.key(i);
-          if (k && k.startsWith("flora-daily-summary-") && k !== todayKey) keysToRemove.push(k);
-        }
-        keysToRemove.forEach((key) => window.localStorage.removeItem(key));
-        window.localStorage.setItem(todayKey, "1");
-      } catch { /* silent */ }
+  const loadChatHistory = async () => {
+    try {
+      const { data } = await supabase.functions.invoke("flora-engine", {
+        body: { action: "load_chat" },
+      });
+      if (data?.messages?.length) {
+        const loaded: Message[] = data.messages.map((m: any, index: number) => ({
+          id: m.id || `msg-${index}`,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          timestamp: new Date(m.created_at || Date.now()),
+          feedback: m.feedback,
+          actions: m.actions
+        }));
+
+        setMessages(loaded);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error);
     }
+    setChatLoaded(true);
+  };
 
-    let cancelled = false;
-    (async () => {
-      setIsDailySummaryLoading(true);
+  // Scroll automático
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isTyping]);
+
+  const sendMessage = async (messageText: string) => {
+    if (!messageText.trim() || isSending) return;
+
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: messageText.trim(),
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput("");
+    setIsSending(true);
+    setIsTyping(true);
+    setShowSuggestions(false);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) throw new Error("No access token");
+
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({
+          action: "chat",
+          data: {
+            message: messageText,
+            history: sanitizeHistory(messages.slice(-10)),
+          },
+        }),
+      });
+
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+      const data = await resp.json();
+      const { cleanText, actions } = parseFloraActions(data.response || "Desculpe, houve um erro.");
+
+      const assistantMessage: Message = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: cleanText,
+        timestamp: new Date(),
+        actions
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+
+      // Executar ações automaticamente
+      if (actions.length > 0) {
+        await executeActions(actions);
+      }
+
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      toast.error("Erro ao enviar mensagem. Tente novamente.");
+
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: "Desculpe, houve um erro na comunicação. Tente novamente em alguns instantes.",
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsSending(false);
+      setIsTyping(false);
+    }
+  };
+
+  const executeActions = async (actions: FloraAction[]) => {
+    for (const action of actions) {
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData?.session?.access_token;
-        if (!accessToken) return;
+        switch (action.type) {
+          case "CRONOGRAMA":
+            toast.success("Cronograma criado com sucesso!");
+            navigate("/dashboard");
+            break;
+          case "QUIZ":
+            toast.success("Quiz gerado! Verifique suas notificações.");
+            break;
+          case "FLASHCARDS":
+            toast.success("Flashcards criados!");
+            break;
+          case "POMODORO":
+            toast.success("Temporizador Pomodoro iniciado!");
+            break;
+          default:
+            console.log("Ação executada:", action.type);
+        }
+      } catch (error) {
+        console.error('Erro ao executar ação:', error);
+      }
+    }
+  };
 
-        const resp = await fetch(CHAT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({
-            action: "recommend",
-            data: {
-              message: "Me dê um resumo rápido do meu progresso hoje e o que devo focar. Não repita boas-vindas.",
-              history: sanitizeHistory(messages.slice(-5)),
-            },
-          }),
-        });
+  const handleFeedback = async (messageId: string, feedback: 'positive' | 'negative') => {
+    setMessages(prev => prev.map(msg =>
+      msg.id === messageId ? { ...msg, feedback } : msg
+    ));
+
+    // Salvar feedback no backend
+    try {
+      await supabase.functions.invoke("flora-engine", {
+        body: {
+          action: "feedback",
+          data: { messageId, feedback }
+        },
+      });
+    } catch (error) {
+      console.error('Erro ao salvar feedback:', error);
+    }
+  };
+
+  const clearChat = async () => {
+    if (!confirm("Tem certeza que deseja limpar o histórico do chat?")) return;
+
+    try {
+      await supabase.functions.invoke("flora-engine", {
+        body: { action: "clear_chat" },
+      });
+      setMessages([]);
+      toast.success("Histórico limpo com sucesso!");
+    } catch (error) {
+      toast.error("Erro ao limpar histórico.");
+    }
+  };
+
+  const suggestionChips = getSuggestionChips(objetivo, messages.length);
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      >
+        <motion.div
+          initial={{ y: 20 }}
+          animate={{ y: 0 }}
+          className="w-full max-w-2xl bg-card rounded-2xl shadow-2xl border max-h-[80vh] flex flex-col"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <FloraIcon className="w-8 h-8" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">Flora</h3>
+                <p className="text-xs text-muted-foreground">Sua assistente de estudos</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <FloraQuotaIndicator />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={clearChat}
+                className="h-8 w-8"
+                title="Limpar chat"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
+          >
+            {messages.length === 0 && !isTyping && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center py-8"
+              >
+                <FloraIcon className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h4 className="font-medium mb-2">Olá! Como posso te ajudar hoje?</h4>
+                <p className="text-sm text-muted-foreground">
+                  Estou aqui para criar cronogramas, gerar quizzes, explicar conceitos e muito mais!
+                </p>
+              </motion.div>
+            )}
+
+            <AnimatePresence>
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground ml-12'
+                        : 'bg-muted mr-12'
+                    }`}
+                  >
+                    <ReactMarkdown className="text-sm prose prose-sm max-w-none dark:prose-invert">
+                      {message.content}
+                    </ReactMarkdown>
+
+                    {message.role === 'assistant' && (
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => handleFeedback(message.id, 'positive')}
+                          >
+                            <ThumbsUp className={`w-3 h-3 ${message.feedback === 'positive' ? 'text-green-500' : 'text-muted-foreground'}`} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => handleFeedback(message.id, 'negative')}
+                          >
+                            <ThumbsDown className={`w-3 h-3 ${message.feedback === 'negative' ? 'text-red-500' : 'text-muted-foreground'}`} />
+                          </Button>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {message.timestamp.toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {isTyping && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex justify-start"
+              >
+                <div className="bg-muted rounded-2xl px-4 py-3 mr-12">
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                    </div>
+                    <span className="text-xs text-muted-foreground">Flora está digitando...</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Suggestions */}
+          {showSuggestions && messages.length < 3 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="px-4 pb-2"
+            >
+              <div className="flex flex-wrap gap-2">
+                {suggestionChips.slice(0, 4).map((suggestion, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => sendMessage(suggestion)}
+                    disabled={isSending}
+                    className="text-xs h-8"
+                  >
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    {suggestion}
+                  </Button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Input */}
+          <div className="p-4 border-t">
+            <div className="flex gap-2">
+              <Input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && sendMessage(input)}
+                placeholder="Digite sua mensagem..."
+                disabled={isSending}
+                className="flex-1"
+              />
+              <Button
+                onClick={() => sendMessage(input)}
+                disabled={!input.trim() || isSending}
+                size="icon"
+                className="shrink-0"
+              >
+                {isSending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
         if (!resp.ok || !resp.body || cancelled) return;
         const reader = resp.body.getReader();
